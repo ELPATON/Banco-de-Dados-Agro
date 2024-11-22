@@ -1,161 +1,159 @@
 
+
 CREATE DATABASE producao_agricola;
 USE producao_agricola;
 
+CREATE TABLE agricultores (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    telefone VARCHAR(15),
+    email VARCHAR(100)
+);
+
+CREATE TABLE propriedades (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    localizacao VARCHAR(255),
+    area_total DECIMAL(10, 2),
+    agricultor_id INT,
+    FOREIGN KEY (agricultor_id) REFERENCES agricultores(id)
+);
 
 CREATE TABLE culturas (
     id INT PRIMARY KEY AUTO_INCREMENT,
     nome VARCHAR(100) NOT NULL,
-    tipo VARCHAR(50),
-    ciclo_producao INT NOT NULL COMMENT 'Tempo em dias',
-    observacoes TEXT
+    tipo VARCHAR(100)
 );
-
-CREATE TABLE areas (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    nome VARCHAR(100) NOT NULL,
-    localizacao VARCHAR(200),
-    tamanho DECIMAL(10, 2) NOT NULL COMMENT 'Em hectares',
-    condicoes_solo VARCHAR(100)
-);
-
 
 CREATE TABLE safras (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    cultura_id INT NOT NULL,
-    area_id INT NOT NULL,
-    data_plantio DATE NOT NULL,
-    previsao_colheita DATE NOT NULL,
-    quantidade_produzida DECIMAL(10, 2) DEFAULT 0 COMMENT 'Em toneladas',
-    FOREIGN KEY (cultura_id) REFERENCES culturas(id),
-    FOREIGN KEY (area_id) REFERENCES areas(id)
+    propriedade_id INT,
+    cultura_id INT,
+    ano INT,
+    area DECIMAL(10, 2),
+    rendimento DECIMAL(10, 2),
+    FOREIGN KEY (propriedade_id) REFERENCES propriedades(id),
+    FOREIGN KEY (cultura_id) REFERENCES culturas(id)
 );
-
 
 CREATE TABLE insumos (
     id INT PRIMARY KEY AUTO_INCREMENT,
     nome VARCHAR(100) NOT NULL,
-    tipo VARCHAR(50) NOT NULL COMMENT 'Ex.: fertilizante, pesticida',
-    estoque DECIMAL(10, 2) NOT NULL COMMENT 'Quantidade em estoque',
-    custo_unidade DECIMAL(10, 2) NOT NULL
+    preco DECIMAL(10, 2),
+    fornecedor VARCHAR(100)
 );
 
-
-CREATE TABLE movimentacao_insumos (
+CREATE TABLE aplicacoes_insumos (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    insumo_id INT NOT NULL,
-    tipo_movimentacao ENUM('entrada', 'saida') NOT NULL,
-    quantidade DECIMAL(10, 2) NOT NULL,
-    data_movimentacao DATE DEFAULT NOW(),
+    safra_id INT,
+    insumo_id INT,
+    quantidade DECIMAL(10, 2),
+    FOREIGN KEY (safra_id) REFERENCES safras(id),
     FOREIGN KEY (insumo_id) REFERENCES insumos(id)
 );
 
-
 CREATE TABLE clima (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    area_id INT NOT NULL,
-    data_registro DATE NOT NULL,
-    temperatura DECIMAL(5, 2),
-    precipitacao DECIMAL(5, 2),
-    observacoes TEXT,
-    FOREIGN KEY (area_id) REFERENCES areas(id)
-);
-
-
-CREATE TABLE relatorios_producao (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    safra_id INT NOT NULL,
-    data_relatorio DATE DEFAULT NOW(),
-    detalhes TEXT,
+    safra_id INT,
+    temperatura_media DECIMAL(5, 2),
+    chuva_acumulada DECIMAL(10, 2),
     FOREIGN KEY (safra_id) REFERENCES safras(id)
 );
 
+INSERT INTO agricultores (nome, telefone, email) VALUES ('João Silva', '75981234567', 'joao@gmail.com');
+INSERT INTO agricultores (nome, telefone, email) VALUES ('Maria Oliveira', '75992345678', 'maria@gmail.com');
+INSERT INTO propriedades (nome, localizacao, area_total, agricultor_id) VALUES ('Fazenda Boa Vista', 'Feira de Santana', 100.5, 1);
+INSERT INTO propriedades (nome, localizacao, area_total, agricultor_id) VALUES ('Sítio Recanto', 'Serrinha', 50.3, 2);
+INSERT INTO culturas (nome, tipo) VALUES ('Milho', 'Cereal');
+INSERT INTO culturas (nome, tipo) VALUES ('Soja', 'Grão');
+INSERT INTO safras (propriedade_id, cultura_id, ano, area, rendimento) VALUES (1, 1, 2024, 80, 300);
+INSERT INTO safras (propriedade_id, cultura_id, ano, area, rendimento) VALUES (2, 2, 2023, 30, 200);
+INSERT INTO insumos (nome, preco, fornecedor) VALUES ('Adubo NPK', 120, 'Fertilizantes Ltda');
+INSERT INTO insumos (nome, preco, fornecedor) VALUES ('Herbicida X', 60, 'Agroquímica SA');
+INSERT INTO aplicacoes_insumos (safra_id, insumo_id, quantidade) VALUES (1, 1, 50);
+INSERT INTO aplicacoes_insumos (safra_id, insumo_id, quantidade) VALUES (2, 2, 20);
 
-CREATE VIEW V_todas_culturas AS
-SELECT * FROM culturas;
+UPDATE insumos SET preco = 130 WHERE id = 1;
+UPDATE propriedades SET area_total = 110 WHERE id = 1;
+UPDATE safras SET rendimento = 310 WHERE id = 1;
 
--- View de todas as áreas de plantio
-CREATE VIEW V_todas_areas AS
-SELECT * FROM areas;
-
-CREATE VIEW V_producao_por_safra AS
-SELECT 
-    s.id AS safra_id, 
-    c.nome AS cultura, 
-    a.nome AS area, 
-    s.data_plantio, 
-    s.previsao_colheita, 
-    s.quantidade_produzida
-FROM safras s
-JOIN culturas c ON s.cultura_id = c.id
-JOIN areas a ON s.area_id = a.id;
-
-
-CREATE VIEW V_consumo_insumos AS
-SELECT 
-    mi.insumo_id,
-    i.nome AS insumo,
-    mi.tipo_movimentacao,
-    SUM(mi.quantidade) AS total_movimentado
-FROM movimentacao_insumos mi
-JOIN insumos i ON mi.insumo_id = i.id
-GROUP BY mi.insumo_id, mi.tipo_movimentacao;
-
--- Procedures
+DELETE FROM aplicacoes_insumos WHERE id = 2;
+DELETE FROM culturas WHERE id = 2;
+DELETE FROM propriedades WHERE id = 2;
 
 DELIMITER $$
-CREATE PROCEDURE listar_safras_por_cultura(IN cultura_nome VARCHAR(100))
+
+CREATE PROCEDURE ListarSafrasPorAno(IN ano INT)
 BEGIN
-    SELECT 
-        s.id AS safra_id, 
-        a.nome AS area, 
-        s.data_plantio, 
-        s.previsao_colheita, 
-        s.quantidade_produzida
+    SELECT * FROM safras WHERE ano = ano;
+END$$
+
+CREATE PROCEDURE AtualizarPrecoInsumo(IN insumo_id INT, IN novo_preco DECIMAL(10, 2))
+BEGIN
+    UPDATE insumos SET preco = novo_preco WHERE id = insumo_id;
+END$$
+
+CREATE PROCEDURE ConsultarColheita(IN safra_id INT)
+BEGIN
+    SELECT s.id, c.nome AS cultura, s.area, s.rendimento
     FROM safras s
     JOIN culturas c ON s.cultura_id = c.id
-    JOIN areas a ON s.area_id = a.id
-    WHERE c.nome = cultura_nome
-    ORDER BY s.data_plantio DESC;
+    WHERE s.id = safra_id;
 END$$
-DELIMITER ;
 
+CREATE FUNCTION CalcularCustoTotalInsumos(safra_id INT)
+RETURNS DECIMAL(10, 2)
+DETERMINISTIC
+BEGIN
+    RETURN (SELECT SUM(ai.quantidade * i.preco)
+            FROM aplicacoes_insumos ai
+            JOIN insumos i ON ai.insumo_id = i.id
+            WHERE ai.safra_id = safra_id);
+END$$
 
-DELIMITER $$
-CREATE TRIGGER atualizar_estoque_insumos
-AFTER INSERT ON movimentacao_insumos
+CREATE FUNCTION AreaRestante(area_total DECIMAL(10, 2), area_utilizada DECIMAL(10, 2))
+RETURNS DECIMAL(10, 2)
+DETERMINISTIC
+BEGIN
+    RETURN area_total - area_utilizada;
+END$$
+
+CREATE FUNCTION CalcularMediaTemperatura(safra_id INT)
+RETURNS DECIMAL(5, 2)
+DETERMINISTIC
+BEGIN
+    RETURN (SELECT AVG(temperatura_media) FROM clima WHERE safra_id = safra_id);
+END$$
+
+CREATE TRIGGER AtualizarEstoqueInsumo
+AFTER INSERT ON aplicacoes_insumos
 FOR EACH ROW
 BEGIN
-    IF NEW.tipo_movimentacao = 'saida' THEN
-        UPDATE insumos
-        SET estoque = estoque - NEW.quantidade
-        WHERE id = NEW.insumo_id;
-    ELSEIF NEW.tipo_movimentacao = 'entrada' THEN
-        UPDATE insumos
-        SET estoque = estoque + NEW.quantidade
-        WHERE id = NEW.insumo_id;
-    END IF;
+    UPDATE insumos SET preco = preco - NEW.quantidade WHERE id = NEW.insumo_id;
 END$$
+
+CREATE TRIGGER RestabelecerEstoqueInsumo
+AFTER DELETE ON aplicacoes_insumos
+FOR EACH ROW
+BEGIN
+    UPDATE insumos SET preco = preco + OLD.quantidade WHERE id = OLD.insumo_id;
+END$$
+
+CREATE TRIGGER AtualizarRendimento
+AFTER INSERT ON clima
+FOR EACH ROW
+BEGIN
+    UPDATE safras SET rendimento = rendimento + NEW.chuva_acumulada WHERE id = NEW.safra_id;
+END$$
+
 DELIMITER ;
 
+CREATE VIEW V_TodasSafras AS SELECT * FROM safras;
+CREATE VIEW V_AreaUtilizada AS SELECT propriedade_id, SUM(area) AS total_area FROM safras GROUP BY propriedade_id;
+CREATE VIEW V_RendimentoMedio AS SELECT cultura_id, AVG(rendimento) AS rendimento_medio FROM safras GROUP BY cultura_id;
+CREATE VIEW V_AplicacaoInsumos AS SELECT ai.*, i.nome FROM aplicacoes_insumos ai JOIN insumos i ON ai.insumo_id = i.id;
+CREATE VIEW V_PropriedadesAgricultores AS SELECT p.*, a.nome AS agricultor FROM propriedades p JOIN agricultores a ON p.agricultor_id = a.id;
 
-INSERT INTO culturas (nome, tipo, ciclo_producao, observacoes)
-VALUES ('Soja', 'Grãos', 120, 'Cuidado com pragas durante o ciclo.'),
-       ('Milho', 'Grãos', 90, 'Prefere solo argiloso.');
+SELECT * FROM V_TodasSafras WHERE ano = 2024;
+SELECT p.nome, SUM(s.area) AS area_total FROM propriedades p JOIN safras s ON p.id = s.propriedade_id GROUP BY p.nome HAVING area_total > 50 ORDER BY area_total DESC;
 
-INSERT INTO areas (nome, localizacao, tamanho, condicoes_solo)
-VALUES ('Campo 1', 'Coordenadas X, Y', 20.5, 'Solo argiloso'),
-       ('Campo 2', 'Coordenadas A, B', 15.2, 'Solo arenoso');
-
-INSERT INTO insumos (nome, tipo, estoque, custo_unidade)
-VALUES ('Adubo NPK', 'Fertilizante', 500.0, 30.5),
-       ('Defensivo XYZ', 'Pesticida', 200.0, 100.0);
-
-INSERT INTO safras (cultura_id, area_id, data_plantio, previsao_colheita, quantidade_produzida)
-VALUES (1, 1, '2024-09-01', '2024-12-30', 10.5),
-       (2, 2, '2024-10-01', '2024-12-31', 8.0);
-
-
-CALL listar_safras_por_cultura('Soja');
-
-DROP DATABASE producao_agricola;
